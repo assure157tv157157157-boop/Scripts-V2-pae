@@ -1,0 +1,748 @@
+--// SERVICES
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+
+local plr = Players.LocalPlayer
+local character = plr.Character or plr.CharacterAdded:Wait()
+local humanoid = character:WaitForChild("Humanoid")
+local hrp = character:WaitForChild("HumanoidRootPart")
+
+plr.CharacterAdded:Connect(function(char)
+    character = char
+    humanoid = char:WaitForChild("Humanoid")
+    hrp = char:WaitForChild("HumanoidRootPart")
+end)
+
+--// UI LIB
+local Library = loadstring(game:HttpGet("https://pastefy.app/denUvbha/raw"))()
+
+local Window = Library:MakeWindow({
+    Title = "Spectra hub | Brookhaven RP 🏡",
+    SubTitle = "by: assure_TV",
+    LoadText = "Carregando Spectra",
+    Flags = "Spectrahub_Brookhaven"
+})
+
+Window:AddMinimizeButton({
+    Button = { Image = "rbxassetid://107533266955045", BackgroundTransparency = 0 },
+    Corner = { CornerRadius = UDim.new(35, 1) }
+})
+
+
+
+--////////////////////////////////////////////////////
+--// TROLL TAB
+local TrollTab = Window:MakeTab({
+    Title = "Troll",
+    Icon = "rbxassetid://6862780932"
+})
+
+--////////////////////////////////////////////////////
+--// PLAYER LIST
+local selectedPlayer
+
+local function getPlayers()
+    local t = {}
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= plr then
+            table.insert(t, p.Name)
+        end
+    end
+    return t
+end
+
+local dropdown = TrollTab:AddDropdown({
+    Name = "Escolher Player",
+    Options = getPlayers(),
+    Callback = function(v)
+        selectedPlayer = v
+    end
+})
+
+TrollTab:AddButton({
+    Name = "Atualizar Lista",
+    Callback = function()
+        dropdown:Set(getPlayers())
+    end
+})
+
+
+
+--==============================
+-- SPECTATE (BOTÃO ARRUMADO)
+--==============================
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Camera = workspace.CurrentCamera
+local LocalPlayer = Players.LocalPlayer
+
+local spectating = false
+local spectateConn
+local charConn
+local currentTarget
+
+--==============================
+-- FUNÇÕES
+--==============================
+local function resetCamera()
+if spectateConn then spectateConn:Disconnect() spectateConn = nil end
+if charConn then charConn:Disconnect() charConn = nil end
+
+currentTarget = nil
+
+local char = LocalPlayer.Character
+local hum = char and char:FindFirstChildOfClass("Humanoid")
+if hum then
+Camera.CameraSubject = hum
+Camera.CameraType = Enum.CameraType.Custom
+end
+
+end
+
+local function spectatePlayer(player)
+if not spectating or not player then return end
+
+resetCamera()
+spectating = true
+currentTarget = player
+
+spectateConn = RunService.RenderStepped:Connect(function()
+if not spectating then return end
+if not currentTarget or not currentTarget.Character then return end
+
+local hum = currentTarget.Character:FindFirstChildOfClass("Humanoid")
+if hum then
+Camera.CameraSubject = hum
+Camera.CameraType = Enum.CameraType.Custom
+end
+
+end)
+
+charConn = player.CharacterAdded:Connect(function()
+task.wait(0.1)
+if spectating and currentTarget == player then
+spectatePlayer(player)
+end
+end)
+
+end
+
+--==============================
+-- PLAYER SAINDO
+--==============================
+Players.PlayerRemoving:Connect(function(plr)
+if spectating and currentTarget == plr then
+resetCamera()
+spectating = false
+end
+end)
+
+--==============================
+-- BOTÃO
+--==============================
+TrollTab:AddToggle({
+Name = "Spectar Jogador",
+Default = false,
+Callback = function(state)
+spectating = state
+
+if not state then
+resetCamera()
+return
+end
+
+local target = Players:FindFirstChild(selectedPlayer)
+if target then
+spectatePlayer(target)
+else
+resetCamera()
+end
+
+end
+
+})
+
+--==============================
+-- TROCA DE PLAYER (SEM QUEBRAR LISTA)
+--==============================
+task.spawn(function()
+local lastSelected
+
+while true do
+task.wait(0.15)
+
+if not spectating then
+lastSelected = nil
+continue
+end
+
+if selectedPlayer ~= lastSelected then
+lastSelected = selectedPlayer
+local newTarget = Players:FindFirstChild(selectedPlayer)
+
+if newTarget then      
+    spectatePlayer(newTarget)      
+else      
+    resetCamera()      
+end
+
+end
+
+end
+
+end)
+
+--==============================
+-- TELEPORTAR PARA JOGADOR
+--==============================
+TrollTab:AddButton({
+    Name = "Teleportar no Jogador",
+    Callback = function()
+        if not selectedPlayer then return end
+
+        local Players = game:GetService("Players")
+        local plr = Players.LocalPlayer
+        local target = Players:FindFirstChild(selectedPlayer)
+
+        if not target or not target.Character then return end
+
+        local myChar = plr.Character
+        local myHRP = myChar and myChar:FindFirstChild("HumanoidRootPart")
+        local targetHRP = target.Character:FindFirstChild("HumanoidRootPart")
+
+        if myHRP and targetHRP then
+            myHRP.CFrame = targetHRP.CFrame * CFrame.new(0, 0, -3)
+        end
+    end
+})
+
+TrollTab:AddSection({"kill"})
+
+--////////////////////////////////////////////////////
+--// KILL BUTTON
+local running = false
+local seated = false
+local sitConn
+
+TrollTab:AddButton({
+    Name = "KILL",
+    Callback = function()
+        if running or not selectedPlayer then return end
+
+        --🔥 EXECUTA 12x INSTANTE
+        for i = 1, 12 do
+            ReplicatedStorage.Remotes.IncrementBodySize:FireServer(false)
+        end
+
+        local target = Players:FindFirstChild(selectedPlayer)
+        if not target or not target.Character then return end
+
+        local targetHumanoid = target.Character:FindFirstChild("Humanoid")
+        local targetHRP = target.Character:FindFirstChild("HumanoidRootPart")
+        if not targetHumanoid or not targetHRP then return end
+
+        running = true
+        seated = false
+
+        --// COUCH CHECK
+        local hasCouch = false
+        if character:FindFirstChild("Couch") then
+            hasCouch = true
+        end
+        for _, t in ipairs(plr.Backpack:GetChildren()) do
+            if t.Name == "Couch" then
+                hasCouch = true
+            end
+        end
+
+        if not hasCouch then
+            ReplicatedStorage.RE["1Too1l"]:InvokeServer("PickingTools", "Couch")
+            task.wait(0.3)
+        end
+
+        local couch = plr.Backpack:FindFirstChild("Couch")
+        if couch then
+            humanoid:EquipTool(couch)
+        end
+
+        task.wait(0.2)
+
+        --// SIT DETECT
+        if sitConn then sitConn:Disconnect() end
+        sitConn = targetHumanoid.Seated:Connect(function(active)
+            if active then
+                seated = true
+                running = false
+                sitConn:Disconnect()
+
+                -- TELEPORT 1
+                hrp.CFrame = CFrame.new(-54.24, -298.21, -184.12)
+                task.wait(0.3)
+
+                humanoid:UnequipTools()
+                task.wait(0.7)
+
+                -- TELEPORT 2
+                hrp.CFrame = CFrame.new(-27.59, 4.27, -16.84)
+            end
+        end)
+
+        --// INSANE GRAB LOOP
+        task.spawn(function()
+            local tickSide = 1
+            while running and not seated do
+                local base = targetHRP.Position
+
+                local offsets = {
+                    Vector3.new(3 * tickSide, 0, 0),
+                    Vector3.new(-3 * tickSide, 0, 0),
+                    Vector3.new(0, 0, 3 * tickSide),
+                    Vector3.new(0, 0, -3 * tickSide),
+                    Vector3.new(0, 3, 0),
+                    Vector3.new(0, -3, 0),
+                    Vector3.new(1.5, -3.2, 1.5),
+                    Vector3.new(-1.5, -3.2, -1.5)
+                }
+
+                for _, off in ipairs(offsets) do
+                    if not running or seated then break end
+                    hrp.CFrame = CFrame.new(base + off, base)
+                    task.wait(0.035)
+                end
+
+                tickSide = -tickSide
+            end
+        end)
+    end
+})
+
+--////////////////////////////////////////////////////
+--// STOP BUTTON
+TrollTab:AddButton({
+    Name = "PARAR",
+    Callback = function()
+        running = false
+        seated = true
+        if sitConn then sitConn:Disconnect() end
+
+        if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+            plr.Character.HumanoidRootPart.CFrame =
+                CFrame.new(-27.59, 4.27, -16.84)
+        end
+    end
+})
+
+TrollTab:AddSection({"troll car"})
+
+--////////////////////////////////////////////////////
+--// BOTÃO SAFADO 😈 (BRING ALL CARS)
+
+TrollTab:AddButton({
+    Name = "Bring All Cars",
+    Callback = function()
+        local char = plr.Character
+        if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+
+        local hrpCF = char.HumanoidRootPart.CFrame
+
+        for _, v in ipairs(workspace.Vehicles:GetChildren()) do
+            if v:IsA("Model") and v.PrimaryPart then
+                v:SetPrimaryPartCFrame(hrpCF)
+            end
+        end
+    end
+})
+
+TrollTab:AddSection({"fling sofa"})
+
+
+TrollTab:AddToggle({
+    Name = "Fling sofa",
+    Description = "fling Croch, starting Make Player For Void Kill/glitch",
+    Default = false,
+    Callback = function(state)
+        flingCrochActive = state
+
+        task.spawn(function()
+            while flingCrochActive do
+                local Players = game:GetService("Players")
+                local LocalPlayer = Players.LocalPlayer
+                local cam = workspace.CurrentCamera
+                if not selectedPlayer then task.wait(0.5) continue end
+
+                local target = Players:FindFirstChild(selectedPlayer)
+                if not target or not target.Character then task.wait(0.5) continue end
+
+                local char = LocalPlayer.Character
+                local root = char and char:FindFirstChild("HumanoidRootPart")
+                local tRoot = target.Character:FindFirstChild("HumanoidRootPart")
+                local tHum = target.Character:FindFirstChildOfClass("Humanoid")
+                local hum = char and char:FindFirstChildOfClass("Humanoid")
+                if not (root and tRoot and tHum and hum) then task.wait(0.5) continue end
+
+                -- ======= CÓDIGO ORIGINAL (INTACTO) =======
+
+                local args = { [1] = "ClearAllTools" }
+                game:GetService("ReplicatedStorage").RE:FindFirstChild("1Clea1rTool1s"):FireServer(unpack(args))
+                task.wait(0.3)
+                game:GetService("ReplicatedStorage").RE:FindFirstChild("1Too1l"):InvokeServer("PickingTools","Couch")
+
+                local original = root.CFrame
+                local tool = LocalPlayer.Backpack:FindFirstChildOfClass("Tool")
+                if tool then tool.Parent = char end
+
+                workspace.FallenPartsDestroyHeight = -math.huge
+
+                local bv = Instance.new("BodyVelocity")
+                bv.Name = "FlingForce"
+                bv.Velocity = Vector3.new(9e8,9e8,9e8)
+                bv.MaxForce = Vector3.new(math.huge,math.huge,math.huge)
+                bv.Parent = root
+
+                hum:SetStateEnabled(Enum.HumanoidStateType.Seated,false)
+                hum.PlatformStand = false
+                cam.CameraSubject = tRoot
+
+                local angle = 0
+                local t = tick()
+                while flingCrochActive
+                    and tick() - t < 3
+                    and target
+                    and target.Character
+                    and target.Character:FindFirstChildOfClass("Humanoid") do
+
+                    tHum = target.Character:FindFirstChildOfClass("Humanoid")
+                    tRoot = target.Character:FindFirstChild("HumanoidRootPart")
+                    if not tRoot then break end
+
+                    angle += 30
+                    root.CFrame =
+                        CFrame.new(tRoot.Position + Vector3.new(0, 1, 0))
+                        * CFrame.Angles(math.rad(angle), 0, 0)
+
+                    root.Velocity = Vector3.new(9e8,9e8,9e8)
+                    root.RotVelocity = Vector3.new(9e8,9e8,9e8)
+                    task.wait()
+                end
+
+                bv:Destroy()
+                hum:SetStateEnabled(Enum.HumanoidStateType.Seated,true)
+                hum.PlatformStand = false
+                root.CFrame = original
+                cam.CameraSubject = hum
+
+                for _, p in pairs(char:GetDescendants()) do
+                    if p:IsA("BasePart") then
+                        p.Velocity = Vector3.zero
+                        p.RotVelocity = Vector3.zero
+                    end
+                end
+
+                hum:UnequipTools()
+                game:GetService("ReplicatedStorage").RE:FindFirstChild("1Too1l")
+                    :InvokeServer("PickingTools","Couch")
+
+                -- ========================================
+
+                task.wait(0.5) -- intervalo entre repetições
+            end
+        end)
+    end
+})
+
+
+
+TrollTab:AddSection({ " Orbit TROLL" })
+
+-- Config global
+OrbitSettings = {
+    Speed = 2,
+    Distance = 6,
+    Height = 0,
+    Fling = false
+}
+
+-- Sliders
+TrollTab:AddSlider({
+    Name = "Speed Spin",
+    Min = 1,
+    Max = 20,
+    Default = 2,
+    Callback = function(Value)
+        OrbitSettings.Speed = Value
+    end
+})
+
+TrollTab:AddSlider({
+    Name = "Distance",
+    Min = 1,
+    Max = 20,
+    Default = 6,
+    Callback = function(Value)
+        OrbitSettings.Distance = Value
+    end
+})
+
+TrollTab:AddSlider({
+    Name = "Height",
+    Min = -10,
+    Max = 10,
+    Default = 0,
+    Callback = function(Value)
+        OrbitSettings.Height = Value
+    end
+})
+
+---------------------------------------------------
+-- Função global que cria a orbita
+function orbitBall(targetChar, modeName)
+    if not targetChar or not targetChar:FindFirstChild("HumanoidRootPart") then return end
+
+    player = game:GetService("Players").LocalPlayer
+    character = player.Character or player.CharacterAdded:Wait()
+    backpack = player:WaitForChild("Backpack")
+    serverBalls = workspace:WaitForChild("WorkspaceCom"):WaitForChild("001_SoccerBalls")
+
+    -- garantir bola
+    if not backpack:FindFirstChild("SoccerBall") and not character:FindFirstChild("SoccerBall") then
+        game:GetService("ReplicatedStorage").RE:FindFirstChild("1Too1l")
+            :InvokeServer("PickingTools", "SoccerBall")
+    end
+
+    repeat task.wait() until backpack:FindFirstChild("SoccerBall")
+        or character:FindFirstChild("SoccerBall")
+
+    ballTool = backpack:FindFirstChild("SoccerBall")
+    if ballTool then ballTool.Parent = character end
+
+    repeat task.wait() until serverBalls:FindFirstChild("Soccer"..player.Name)
+    orb = serverBalls:FindFirstChild("Soccer"..player.Name)
+    if not orb then return end
+
+    orb.Name = modeName
+    orb.CanCollide = false
+    orb.Massless = true
+    orb.CustomPhysicalProperties = PhysicalProperties.new(0.0001, 0, 0)
+
+    if orb:FindFirstChild("FlingPower") then
+        orb.FlingPower:Destroy()
+    end
+
+    -- só flinga se OrbitSettings.Fling == true
+    if OrbitSettings.Fling then
+        bv = Instance.new("BodyVelocity")
+        bv.Name = "FlingPower"
+        bv.Velocity = Vector3.new(9e8, 9e8, 9e8)
+        bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+        bv.P = 9e900
+        bv.Parent = orb
+    end
+
+    loop = Instance.new("BindableEvent")
+    loop.Name = modeName.."Loop"
+    loop.Parent = character
+
+    task.spawn(function()
+        while loop.Parent and orb and orb.Parent and targetChar and targetChar.Parent do
+            angle = tick() * OrbitSettings.Speed
+            offset = CFrame.new(
+                math.cos(angle) * OrbitSettings.Distance,
+                OrbitSettings.Height,
+                math.sin(angle) * OrbitSettings.Distance
+            )
+            orb.CFrame = targetChar.HumanoidRootPart.CFrame * offset
+            task.wait(1/60)
+        end
+    end)
+end
+
+---------------------------------------------------
+-- Toggles
+TrollTab:AddToggle({
+    Name = "Orbit Ball",
+    Description = "A bola gira em volta de você.",
+    Default = false,
+    Callback = function(state)
+        char = game:GetService("Players").LocalPlayer.Character
+        loop = char and char:FindFirstChild("OrbitBallLoop")
+        if state then
+            orbitBall(char, "OrbitBall")
+        elseif loop then
+            loop:Destroy()
+            orb = workspace.WorkspaceCom["001_SoccerBalls"]:FindFirstChild("OrbitBall")
+            if orb then orb:Destroy() end
+        end
+    end
+})
+
+TrollTab:AddToggle({
+    Name = "Orbit Ball [Alvo]",
+    Description = "A bola gira em volta do alvo selecionado.",
+    Default = false,
+    Callback = function(state)
+        target = selectedPlayer and game:GetService("Players"):FindFirstChild(selectedPlayer)
+        if not target then return end
+
+        char = game:GetService("Players").LocalPlayer.Character
+        loop = char and char:FindFirstChild("OrbitTargetLoop")
+
+        if state then
+            orbitBall(target.Character, "OrbitTarget")
+        elseif loop then
+            loop:Destroy()
+            orb = workspace.WorkspaceCom["001_SoccerBalls"]:FindFirstChild("OrbitTarget")
+            if orb then orb:Destroy() end
+        end
+    end
+})
+
+
+
+TrollTab:AddSection({ "+18" })
+
+
+--// SLIDER VELOCIDADE (sÃƒÂ³ velocidade)
+TrollTab:AddSlider({
+    Name = "velocidade de frente e trÃƒÂ¡s +18",
+    Min = 1,
+    Max = 100,
+    Default = 5,
+    Increment = 1,
+    Callback = function(v)
+        moveSpeed = v
+    end
+})
+
+--// TOGGLE PRINCIPAL
+TrollTab:AddToggle({
+    Name = "Teleport Troll (On / Off)",
+    Default = false,
+    Callback = function(state)
+        enabled = state
+
+        if connection then
+            connection:Disconnect()
+            connection = nil
+        end
+
+        if not state or not selectedPlayer then return end
+
+        timeOffset = 0
+
+        connection = RunService.Heartbeat:Connect(function(dt)
+            if not enabled then return end
+
+            local target = Players:FindFirstChild(selectedPlayer)
+            if not target or not target.Character then return end
+
+            local thrp = target.Character:FindFirstChild("HumanoidRootPart")
+            local char = plr.Character
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+
+            if not (thrp and hrp) then return end
+
+            -- TEMPO (slider atua aqui)
+            timeOffset += dt * (moveSpeed * 0.3)
+
+            -- FRENTE Ã¢â€ â€ TRÃƒÂS
+            local baseDistance = 4.5      -- mais perto do jogador
+            local oscillation = math.sin(timeOffset) * 3
+
+            -- CIMA Ã¢â€ â€¢ BAIXO (bem leve)
+            local verticalOffset = math.sin(timeOffset * 2) * 0.6
+
+            -- POSIÃƒâ€¡ÃƒÆ’O FINAL
+            local targetPos =
+                thrp.Position
+                - thrp.CFrame.LookVector * (baseDistance + oscillation)
+                + Vector3.new(0, verticalOffset, 0)
+
+            -- TREMIDA VISUAL
+            local shake = Vector3.new(
+                math.random(-10,10) / 70,
+                math.random(-10,10) / 70,
+                0
+            )
+
+            -- APLICAR TELEPORTE
+            hrp.CFrame = CFrame.lookAt(
+                targetPos + shake,
+                thrp.Position
+            )
+        end)
+    end
+})
+
+
+
+
+
+--==============================
+-- SLIDER VELOCIDADE
+--==============================
+TrollTab:AddSlider({
+    Name = "Velocidade do gogogogo",
+    Min = 1,
+    Max = 100,
+    Default = 10,
+    Increment = 1,
+    Callback = function(v)
+        speed = v
+    end
+})
+
+--==============================
+-- TOGGLE
+--==============================
+TrollTab:AddToggle({
+    Name = "gogogogo no player +18",
+    Default = false,
+    Callback = function(state)
+        enabled = state
+
+        if connection then
+            connection:Disconnect()
+            connection = nil
+        end
+
+        if not state or not selectedPlayer then return end
+
+        timeValue = 0
+
+        connection = RunService.Heartbeat:Connect(function(dt)
+            if not enabled then return end
+
+            local target = Players:FindFirstChild(selectedPlayer)
+            if not target or not target.Character then return end
+
+            local tChar = target.Character
+            local tRoot = tChar:FindFirstChild("HumanoidRootPart")
+            local tHead = tChar:FindFirstChild("Head")
+
+            local char = plr.Character
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+
+            if not (tRoot and tHead and hrp) then return end
+
+            -- ALTURA BASEADA NA SUA CINTURA
+            local myHipHeight = hrp.Size.Y * 0.5
+
+            -- ALTURA FINAL (BOCA + UM POUCO PRA CIMA)
+            local heightOffset = Vector3.new(0, tHead.Size.Y * 0.4 + myHipHeight * 0.15, 0)
+
+            -- CONTROLE REAL DE VAI Ã¢â€ â€ VOLTA
+            timeValue += dt * speed
+            local backAndForth = math.sin(timeValue) * 2.5
+
+            -- POSIÃƒâ€¡ÃƒÆ’O NA FRENTE DO JOGADOR
+            local finalPosition =
+                tRoot.Position
+                + tRoot.CFrame.LookVector * (3 + backAndForth)
+                + heightOffset
+
+            -- APLICAR
+            hrp.CFrame = CFrame.lookAt(finalPosition, tHead.Position)
+        end)
+    end
+})
