@@ -703,7 +703,7 @@ TrollTab:AddButton({
         running = true
         seated = false
 
-        --// EXECUTA BODY SIZE UMA VEZ
+        --// BODY SIZE (1x)
         local inc =
             ReplicatedStorage:FindFirstChild("Remotes")
             and ReplicatedStorage.Remotes:FindFirstChild("IncrementBodySize")
@@ -732,6 +732,10 @@ TrollTab:AddButton({
         if couch then
             humanoid:EquipTool(couch)
         end
+
+        --// TELEPORTA PRIMEIRO NO ALVO (ESSENCIAL)
+        hrp.CFrame = targetHRP.CFrame * CFrame.new(0, 0, -2)
+        task.wait(0.15)
 
         --// SIT DETECT
         if sitConn then sitConn:Disconnect() end
