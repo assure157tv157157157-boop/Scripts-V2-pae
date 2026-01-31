@@ -678,6 +678,150 @@ TrollTab:AddButton({
 })
 
 
+
+--////////////////////////////////////////////////////
+--// KILL BUTTON (MESMO JEITO, FUNCIONANDO)
+local running = false
+local seated = false
+local sitConn
+
+TrollTab:AddButton({
+    Name = "KILL",
+    Callback = function()
+        if running or not selectedPlayer then return end
+
+        local Players = game:GetService("Players")
+        local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+        local plr = Players.LocalPlayer
+        local character = plr.Character
+        if not character then return end
+
+        local humanoid = character:FindFirstChildOfClass("Humanoid")
+        local hrp = character:FindFirstChild("HumanoidRootPart")
+        if not humanoid or not hrp then return end
+
+        --🔥 BODY SIZE (SE QUISER 1x MUDA AQUI)
+        for i = 1, 12 do
+            ReplicatedStorage.Remotes.IncrementBodySize:FireServer(false)
+        end
+
+        local target = Players:FindFirstChild(selectedPlayer)
+        if not target or not target.Character then return end
+
+        local targetHumanoid = target.Character:FindFirstChild("Humanoid")
+        local targetHRP = target.Character:FindFirstChild("HumanoidRootPart")
+        if not targetHumanoid or not targetHRP then return end
+
+        running = true
+        seated = false
+
+        --// COUCH CHECK (IGUAL AO SEU)
+        local hasCouch = false
+        if character:FindFirstChild("Couch") then
+            hasCouch = true
+        end
+        for _, t in ipairs(plr.Backpack:GetChildren()) do
+            if t.Name == "Couch" then
+                hasCouch = true
+            end
+        end
+
+        if not hasCouch then
+            ReplicatedStorage.RE["1Too1l"]:InvokeServer("PickingTools", "Couch")
+            task.wait(0.3)
+        end
+
+        local couch = plr.Backpack:FindFirstChild("Couch")
+        if couch then
+            humanoid:EquipTool(couch)
+        end
+
+        task.wait(0.2)
+
+        -- 🔥 TP INICIAL (ÚNICA COISA NOVA, NÃO MUDA A LÓGICA)
+        hrp.CFrame = targetHRP.CFrame * CFrame.new(0, 0, -2)
+        task.wait(0.1)
+
+        --// SIT DETECT (IGUAL AO SEU)
+        if sitConn then sitConn:Disconnect() end
+        sitConn = targetHumanoid.Seated:Connect(function(active)
+            if active then
+                seated = true
+                running = false
+                sitConn:Disconnect()
+
+                hrp.CFrame = CFrame.new(-54.24, -298.21, -184.12)
+                task.wait(0.3)
+
+                humanoid:UnequipTools()
+                task.wait(0.7)
+
+                hrp.CFrame = CFrame.new(-27.59, 4.27, -16.84)
+            end
+        end)
+
+        --// INSANE GRAB LOOP (100% IGUAL)
+        task.spawn(function()
+            local tickSide = 1
+            while running and not seated do
+                local base = targetHRP.Position
+
+                local offsets = {
+                    Vector3.new(3 * tickSide, 0, 0),
+                    Vector3.new(-3 * tickSide, 0, 0),
+                    Vector3.new(0, 0, 3 * tickSide),
+                    Vector3.new(0, 0, -3 * tickSide),
+                    Vector3.new(0, 3, 0),
+                    Vector3.new(0, -3, 0),
+                    Vector3.new(1.5, -3.2, 1.5),
+                    Vector3.new(-1.5, -3.2, -1.5)
+                }
+
+                for _, off in ipairs(offsets) do
+                    if not running or seated then break end
+                    hrp.CFrame = CFrame.new(base + off, base)
+                    task.wait(0.035)
+                end
+
+                tickSide = -tickSide
+            end
+        end)
+    end
+})
+
+
+
+
+TrollTab:AddButton({
+    Name = "PARAR",
+    Callback = function()
+        killRunning = false
+
+        if killConn then
+            killConn:Disconnect()
+            killConn = nil
+        end
+
+        -- Para qualquer loop ativo
+        if killLoop then
+            task.cancel(killLoop)
+            killLoop = nil
+        end
+
+        -- Volta você pro lugar seguro
+        local plr = game:GetService("Players").LocalPlayer
+        local char = plr.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+
+        if hrp then
+            hrp.CFrame = CFrame.new(-27.59, 4.27, -16.84)
+        end
+    end
+})
+
+
+
 TrollTab:AddSection({"troll car"})
 
 --////////////////////////////////////////////////////
