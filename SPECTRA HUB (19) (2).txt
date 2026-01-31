@@ -678,6 +678,125 @@ TrollTab:AddButton({
 })
 
 
+TrollTab:AddSection({"kill"})
+
+local running = false
+local seated = false
+local sitConn
+
+TrollTab:AddButton({
+    Name = "KILL",
+    Callback = function()
+        if running then return end
+        if not selectedPlayer then
+            warn("Nenhum jogador selecionado")
+            return
+        end
+
+        local target = Players:FindFirstChild(selectedPlayer)
+        if not target or not target.Character then return end
+
+        local targetHumanoid = target.Character:FindFirstChild("Humanoid")
+        local targetHRP = target.Character:FindFirstChild("HumanoidRootPart")
+        if not targetHumanoid or not targetHRP then return end
+
+        running = true
+        seated = false
+
+        --// EXECUTA BODY SIZE UMA VEZ
+        local inc =
+            ReplicatedStorage:FindFirstChild("Remotes")
+            and ReplicatedStorage.Remotes:FindFirstChild("IncrementBodySize")
+
+        if inc then
+            inc:FireServer(false)
+        end
+
+        --// COUCH CHECK
+        local hasCouch = character:FindFirstChild("Couch") ~= nil
+        if not hasCouch then
+            for _, t in ipairs(plr.Backpack:GetChildren()) do
+                if t.Name == "Couch" then
+                    hasCouch = true
+                    break
+                end
+            end
+        end
+
+        if not hasCouch then
+            ReplicatedStorage.RE["1Too1l"]:InvokeServer("PickingTools", "Couch")
+            task.wait(0.3)
+        end
+
+        local couch = plr.Backpack:FindFirstChild("Couch")
+        if couch then
+            humanoid:EquipTool(couch)
+        end
+
+        --// SIT DETECT
+        if sitConn then sitConn:Disconnect() end
+        sitConn = targetHumanoid.Seated:Connect(function(active)
+            if active then
+                seated = true
+                running = false
+                sitConn:Disconnect()
+
+                -- TELEPORT 1
+                hrp.CFrame = CFrame.new(-54.24, -298.21, -184.12)
+                task.wait(0.3)
+
+                humanoid:UnequipTools()
+                task.wait(0.7)
+
+                -- TELEPORT 2
+                hrp.CFrame = CFrame.new(-27.59, 4.27, -16.84)
+            end
+        end)
+
+        --// GRAB LOOP
+        task.spawn(function()
+            local tickSide = 1
+            while running and not seated do
+                local base = targetHRP.Position
+
+                local offsets = {
+                    Vector3.new(3 * tickSide, 0, 0),
+                    Vector3.new(-3 * tickSide, 0, 0),
+                    Vector3.new(0, 0, 3 * tickSide),
+                    Vector3.new(0, 0, -3 * tickSide),
+                    Vector3.new(0, 3, 0),
+                    Vector3.new(0, -3, 0),
+                }
+
+                for _, off in ipairs(offsets) do
+                    if not running or seated then break end
+                    hrp.CFrame = CFrame.new(base + off, base)
+                    task.wait(0.04)
+                end
+
+                tickSide = -tickSide
+            end
+        end)
+    end
+})
+
+--////////////////////////////////////////////////////
+--// STOP BUTTON
+TrollTab:AddButton({
+    Name = "PARAR",
+    Callback = function()
+        running = false
+        seated = true
+        if sitConn then sitConn:Disconnect() end
+
+        if hrp then
+            hrp.CFrame = CFrame.new(-27.59, 4.27, -16.84)
+        end
+    end
+})
+
+
+
 TrollTab:AddSection({"troll car"})
 
 --////////////////////////////////////////////////////
