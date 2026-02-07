@@ -1196,6 +1196,646 @@ TrollTab:AddToggle({
 })
 
 
+TrollTab:AddSection({"props troll ALL"})
+
+--===============================
+-- VARIÁVEIS LOCAIS PARA PROPS
+--===============================
+local PROP_RAID_ENABLED = false
+local PROP_RAID_CONNECTION
+local PROP_RAID_Targets = {}
+local PropTargetMap = {}
+local DroppedProps = {}
+local SentProps = {}
+local lastUpdate = 0
+local propCache = {}
+
+--===============================
+-- FUNÇÕES AUXILIARES
+--===============================
+local function GetMyPropsRaid()
+    if tick() - lastUpdate < 0.4 then return propCache end
+    
+    propCache = {}
+    local ws = workspace:FindFirstChild("WorkspaceCom")
+    if not ws then return propCache end
+    
+    for _, folder in ipairs(ws:GetChildren()) do
+        for _, prop in ipairs(folder:GetChildren()) do
+            if prop:FindFirstChild("SetCurrentCFrame")
+            and prop.Name:lower():find(plr.Name:lower()) then
+                table.insert(propCache, prop)
+            end
+        end
+    end
+    
+    lastUpdate = tick()
+    return propCache
+end
+
+local function GetNearbyPlayers()
+    local list = {}
+    if not character or not character:FindFirstChild("HumanoidRootPart") then return list end
+    local hrp = character.HumanoidRootPart
+    
+    for _,p in ipairs(Players:GetPlayers()) do
+        if p ~= plr
+        and p.Character
+        and p.Character:FindFirstChild("HumanoidRootPart")
+        and p.Character:FindFirstChild("Humanoid")
+        and p.Character.Humanoid.Health > 0 then
+            
+            local dist = (p.Character.HumanoidRootPart.Position - hrp.Position).Magnitude
+            if dist <= 150 then
+                table.insert(list, p)
+            end
+        end
+    end
+    return list
+end
+
+--===============================
+-- PROP SIT ALL (Jogadores sentam nas props)
+--===============================
+local function StartPropRaid()
+    if PROP_RAID_CONNECTION then PROP_RAID_CONNECTION:Disconnect() end
+    
+    local angle = 0
+    local height = 0
+    local dir = 1
+    
+    PROP_RAID_CONNECTION = RunService.Heartbeat:Connect(function()
+        if not character or not character:FindFirstChild("HumanoidRootPart") or not humanoid or humanoid.Health <= 0 then return end
+        local hrp = character.HumanoidRootPart
+        
+        local props = GetMyPropsRaid()
+        local targets = {}
+        
+        -- Pegar todos os jogadores próximos
+        for _, p in ipairs(Players:GetPlayers()) do
+            if p ~= plr and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                local dist = (p.Character.HumanoidRootPart.Position - hrp.Position).Magnitude
+                if dist <= 222 then
+                    table.insert(targets, p)
+                end
+            end
+        end
+        
+        if #props == 0 or #targets == 0 then return end
+        
+        -- Atribuir targets
+        for i, prop in ipairs(props) do
+            local index = ((i - 1) % #targets) + 1
+            PROP_RAID_Targets[prop] = targets[index]
+        end
+        
+        angle += math.rad(20)
+        if height > 4 then dir = -1 end
+        if height < -4 then dir = 1 end
+        height += 0.3 * dir
+        
+        for _, prop in ipairs(props) do
+            local target = PROP_RAID_Targets[prop]
+            if not target or not target.Character then continue end
+            
+            local hum = target.Character:FindFirstChild("Humanoid")
+            local root = target.Character:FindFirstChild("HumanoidRootPart")
+            if not hum or not root then continue end
+            
+            if hum.Sit then continue end
+            
+            local radius = math.random(2,5)
+            local offset = Vector3.new(math.cos(angle)*radius, height, math.sin(angle)*radius)
+            
+            pcall(function()
+                prop.SetCurrentCFrame:InvokeServer(root.CFrame * CFrame.new(offset))
+            end)
+        end
+    end)
+end
+
+local function StopPropRaid()
+    if PROP_RAID_CONNECTION then
+        PROP_RAID_CONNECTION:Disconnect()
+        PROP_RAID_CONNECTION = nil
+    end
+    PROP_RAID_Targets = {}
+end
+
+TrollTab:AddToggle({
+    Name = "próp sit all",
+    Default = false,
+    Callback = function(v)
+        PROP_RAID_ENABLED = v
+        if v then
+            StartPropRaid()
+        else
+            StopPropRaid()
+        end
+    end
+})
+
+--===============================
+-- PROP KILL ALL (Caçadores Inteligentes)
+--===============================
+local HUNT_ENABLED = false
+local HUNT_CONNECTION
+
+local function CountPropsOnPlayer(player)
+    local count = 0
+    for _,target in pairs(PropTargetMap) do
+        if target == player then
+            count += 1
+        end
+    end
+    return count
+end
+
+local function GetBestTarget(targets)
+    local bestPlayer = nil
+    local lowestCount = math.huge
+    
+    for _,plr in ipairs(targets) do
+        local c = CountPropsOnPlayer(plr)
+        if c < lowestCount and c < 3 then
+            lowestCount = c
+            bestPlayer = plr
+        end
+    end
+    return bestPlayer
+end
+
+local function StartHunter()
+    if HUNT_CONNECTION then HUNT_CONNECTION:Disconnect() end
+    local t = 0
+    
+    HUNT_CONNECTION = RunService.Heartbeat:Connect(function(dt)
+        if not character or not character:FindFirstChild("HumanoidRootPart") or not humanoid or humanoid.Health <= 0 then return end
+        local hrp = character.HumanoidRootPart
+        
+        local props = GetMyPropsRaid()
+        if #props == 0 then return end
+        
+        local targets = GetNearbyPlayers()
+        t += dt
+        
+        for i, prop in ipairs(props) do
+            local currentTarget = PropTargetMap[prop]
+            
+            if currentTarget then
+                local char = currentTarget.Character
+                if not char or not char:FindFirstChild("HumanoidRootPart") or not char:FindFirstChild("Humanoid") or
+                   char.Humanoid.Health <= 0 or (char.HumanoidRootPart.Position - hrp.Position).Magnitude > 150 then
+                    PropTargetMap[prop] = nil
+                    currentTarget = nil
+                end
+            end
+            
+            if not currentTarget then
+                local newTarget = GetBestTarget(targets)
+                PropTargetMap[prop] = newTarget
+                currentTarget = newTarget
+            end
+            
+            if not currentTarget then
+                local offset = Vector3.new(
+                    math.cos(i+t)*4,
+                    2 + math.sin(t*2+i),
+                    math.sin(i+t)*4
+                )
+                local cf = CFrame.new(hrp.Position + offset)
+                pcall(function()
+                    prop.SetCurrentCFrame:InvokeServer(prop:GetPivot():Lerp(cf, 0.3))
+                end)
+                continue
+            end
+            
+            local hum = currentTarget.Character:FindFirstChild("Humanoid")
+            local root = currentTarget.Character:FindFirstChild("HumanoidRootPart")
+            if not hum or not root then continue end
+            
+            if hum.Sit then
+                if not DroppedProps[prop] then
+                    DroppedProps[prop] = true
+                    local dropPos = Vector3.new(root.Position.X, -460, root.Position.Z)
+                    pcall(function()
+                        prop.SetCurrentCFrame:InvokeServer(CFrame.new(dropPos))
+                    end)
+                end
+                continue
+            end
+            
+            if DroppedProps[prop] and not hum.Sit then
+                DroppedProps[prop] = nil
+            end
+            
+            local move = Vector3.new(
+                math.cos(t*3 + i) * 2,
+                -1.5 + math.sin(t*4 + i),
+                math.sin(t*3 + i) * 2
+            )
+            
+            local cf = root.CFrame * CFrame.new(move) *
+                CFrame.Angles(
+                    math.rad(math.sin(t*5+i)*120),
+                    math.rad(t*180),
+                    0
+                )
+            
+            pcall(function()
+                prop.SetCurrentCFrame:InvokeServer(prop:GetPivot():Lerp(cf, 0.35))
+            end)
+        end
+    end)
+end
+
+local function StopHunter()
+    if HUNT_CONNECTION then
+        HUNT_CONNECTION:Disconnect()
+        HUNT_CONNECTION = nil
+    end
+    PropTargetMap = {}
+    DroppedProps = {}
+end
+
+TrollTab:AddToggle({
+    Name = "prop kill all",
+    Default = false,
+    Callback = function(v)
+        HUNT_ENABLED = v
+        if v then
+            StartHunter()
+        else
+            StopHunter()
+        end
+    end
+})
+
+TrollTab:AddSection({"props para usar em você"})
+
+--===============================
+-- PROP COBRA
+--===============================
+local COBRA_ENABLED = false
+local COBRA_CONNECTION
+
+local function StartCobra()
+    if COBRA_CONNECTION then COBRA_CONNECTION:Disconnect() end
+    local time = 0
+    
+    COBRA_CONNECTION = RunService.Heartbeat:Connect(function(dt)
+        if not character or not character:FindFirstChild("HumanoidRootPart") then return end
+        local hrp = character.HumanoidRootPart
+        
+        local props = GetMyPropsRaid()
+        if #props == 0 then return end
+        
+        time += dt * 10
+        
+        for i, prop in ipairs(props) do
+            local phase = time - i * 1.1
+            local backDir = -hrp.CFrame.LookVector
+            local rightDir = hrp.CFrame.RightVector
+            local upDir = Vector3.new(0,1,0)
+            
+            local backOffset = backDir * (3.5 * i)
+            local sideOffset = rightDir * (math.sin(phase) * 3.2)
+            local upOffset = upDir * (math.cos(phase * 0.8) * 1.2)
+            
+            local pos = hrp.Position + backOffset + sideOffset + upOffset
+            local cf = CFrame.new(pos, pos + backDir)
+            
+            pcall(function()
+                prop.SetCurrentCFrame:InvokeServer(prop:GetPivot():Lerp(cf, 0.35))
+            end)
+        end
+    end)
+end
+
+local function StopCobra()
+    if COBRA_CONNECTION then
+        COBRA_CONNECTION:Disconnect()
+        COBRA_CONNECTION = nil
+    end
+end
+
+TrollTab:AddToggle({
+    Name = "Prop Cobra",
+    Default = false,
+    Callback = function(v)
+        COBRA_ENABLED = v
+        if v then
+            StartCobra()
+        else
+            StopCobra()
+        end
+    end
+})
+
+--===============================
+-- PROP FURACÃO
+--===============================
+local FURACAO_ENABLED = false
+local FURACAO_CONNECTION
+
+local function StartFuracao()
+    if FURACAO_CONNECTION then FURACAO_CONNECTION:Disconnect() end
+    local t = 0
+    
+    FURACAO_CONNECTION = RunService.Heartbeat:Connect(function(dt)
+        if not character or not character:FindFirstChild("HumanoidRootPart") then return end
+        local hrp = character.HumanoidRootPart
+        
+        local props = GetMyPropsRaid()
+        if #props == 0 then return end
+        
+        t += dt * 4
+        
+        for i, prop in ipairs(props) do
+            local angle = t + (i * 0.7)
+            local radius = 4 + math.sin(t + i) * 3
+            local height = math.cos(t*2 + i) * 4
+            
+            local offset = Vector3.new(
+                math.cos(angle) * radius,
+                height,
+                math.sin(angle) * radius
+            )
+            
+            local pos = hrp.Position + offset
+            local look = CFrame.new(pos, hrp.Position)
+            
+            pcall(function()
+                prop.SetCurrentCFrame:InvokeServer(prop:GetPivot():Lerp(look, 0.35))
+            end)
+        end
+    end)
+end
+
+local function StopFuracao()
+    if FURACAO_CONNECTION then
+        FURACAO_CONNECTION:Disconnect()
+        FURACAO_CONNECTION = nil
+    end
+end
+
+TrollTab:AddToggle({
+    Name = "Furacão de Props",
+    Default = false,
+    Callback = function(v)
+        FURACAO_ENABLED = v
+        if v then
+            StartFuracao()
+        else
+            StopFuracao()
+        end
+    end
+})
+
+--===============================
+-- PROPS ESPALHADOS NO AR
+--===============================
+local AIR_ENABLED = false
+local AIR_CONNECTION
+
+local function StartAirSpread()
+    if AIR_CONNECTION then AIR_CONNECTION:Disconnect() end
+    local t = 0
+    
+    AIR_CONNECTION = RunService.Heartbeat:Connect(function(dt)
+        if not character or not character:FindFirstChild("HumanoidRootPart") then return end
+        local hrp = character.HumanoidRootPart
+        
+        local props = GetMyPropsRaid()
+        if #props == 0 then return end
+        
+        t += dt
+        
+        for i, prop in ipairs(props) do
+            local height = 30 + math.sin(t + i) * 3
+            local angle = (i * 2.5)
+            local radius = 12 + (i * 2)
+            
+            local offset = Vector3.new(
+                math.cos(angle) * radius,
+                height,
+                math.sin(angle) * radius
+            )
+            
+            local pos = hrp.Position + offset
+            local cf = CFrame.new(pos) * CFrame.Angles(
+                math.rad((t*50 + i*30) % 360),
+                math.rad((t*35 + i*20) % 360),
+                0
+            )
+            
+            pcall(function()
+                prop.SetCurrentCFrame:InvokeServer(prop:GetPivot():Lerp(cf, 0.30))
+            end)
+        end
+    end)
+end
+
+local function StopAirSpread()
+    if AIR_CONNECTION then
+        AIR_CONNECTION:Disconnect()
+        AIR_CONNECTION = nil
+    end
+end
+
+TrollTab:AddToggle({
+    Name = "Props strela",
+    Default = false,
+    Callback = function(v)
+        AIR_ENABLED = v
+        if v then
+            StartAirSpread()
+        else
+            StopAirSpread()
+        end
+    end
+})
+
+--===============================
+-- PROPS PARA USAR EM PESSOAS SELECIONADAS
+--===============================
+TrollTab:AddSection({"props para usar em pessoas que estão selecionadas na lista"})
+
+--===============================
+-- PROP FLING NO PLAYER SELECIONADO
+--===============================
+local TARGET_FLING_ENABLED = false
+local TARGET_FLING_CONNECTION
+
+local function StartFlingTarget()
+    if TARGET_FLING_CONNECTION then TARGET_FLING_CONNECTION:Disconnect() end
+    local t = 0
+    
+    TARGET_FLING_CONNECTION = RunService.Heartbeat:Connect(function(dt)
+        if not selectedPlayer then return end
+        local target = Players:FindFirstChild(selectedPlayer)
+        if not target or not target.Character then return end
+        
+        local root = target.Character:FindFirstChild("HumanoidRootPart")
+        local hum = target.Character:FindFirstChild("Humanoid")
+        if not root or not hum then return end
+        
+        local props = GetMyPropsRaid()
+        if #props == 0 then return end
+        
+        t += dt * 3
+        
+        for i, prop in ipairs(props) do
+            if hum.Sit then
+                if not SentProps[prop] then
+                    SentProps[prop] = true
+                    local upPos = Vector3.new(root.Position.X, 1000000, root.Position.Z)
+                    pcall(function()
+                        prop.SetCurrentCFrame:InvokeServer(CFrame.new(upPos))
+                    end)
+                end
+                continue
+            end
+            
+            if SentProps[prop] then
+                SentProps[prop] = nil
+                local backPos = character.HumanoidRootPart.Position + Vector3.new(
+                    math.cos(i)*4, 3, math.sin(i)*4
+                )
+                pcall(function()
+                    prop.SetCurrentCFrame:InvokeServer(CFrame.new(backPos))
+                end)
+                continue
+            end
+            
+            local move = Vector3.new(
+                math.cos(t + i) * 3,
+                math.sin(t*2 + i) * 2,
+                math.sin(t + i*2) * 3
+            )
+            
+            local cf = root.CFrame * CFrame.new(move) *
+                CFrame.Angles(
+                    math.rad(math.sin(t*4+i)*180),
+                    math.rad(t*200),
+                    math.rad(math.cos(t*3+i)*180)
+                )
+            
+            pcall(function()
+                prop.SetCurrentCFrame:InvokeServer(prop:GetPivot():Lerp(cf, 0.35))
+            end)
+        end
+    end)
+end
+
+local function StopFlingTarget()
+    if TARGET_FLING_CONNECTION then
+        TARGET_FLING_CONNECTION:Disconnect()
+        TARGET_FLING_CONNECTION = nil
+    end
+    SentProps = {}
+end
+
+TrollTab:AddToggle({
+    Name = "próp fling",
+    Default = false,
+    Callback = function(v)
+        TARGET_FLING_ENABLED = v
+        if v then
+            StartFlingTarget()
+        else
+            StopFlingTarget()
+        end
+    end
+})
+
+--===============================
+-- PROP KILL NO PLAYER SELECIONADO
+--===============================
+local TARGET_KILL_ENABLED = false
+local TARGET_KILL_CONNECTION
+
+local function StartKillTarget()
+    if TARGET_KILL_CONNECTION then TARGET_KILL_CONNECTION:Disconnect() end
+    local t = 0
+    
+    TARGET_KILL_CONNECTION = RunService.Heartbeat:Connect(function(dt)
+        if not selectedPlayer then return end
+        local target = Players:FindFirstChild(selectedPlayer)
+        if not target or not target.Character then return end
+        
+        local root = target.Character:FindFirstChild("HumanoidRootPart")
+        local hum = target.Character:FindFirstChild("Humanoid")
+        if not root or not hum then return end
+        
+        local props = GetMyPropsRaid()
+        if #props == 0 then return end
+        
+        t += dt * 3
+        
+        for i, prop in ipairs(props) do
+            if hum.Sit then
+                if not SentProps[prop] then
+                    SentProps[prop] = true
+                    local downPos = Vector3.new(root.Position.X, -460, root.Position.Z)
+                    pcall(function()
+                        prop.SetCurrentCFrame:InvokeServer(CFrame.new(downPos))
+                    end)
+                end
+                continue
+            end
+            
+            if SentProps[prop] then
+                SentProps[prop] = nil
+                local backPos = character.HumanoidRootPart.Position + Vector3.new(
+                    math.cos(i)*4, 3, math.sin(i)*4
+                )
+                pcall(function()
+                    prop.SetCurrentCFrame:InvokeServer(CFrame.new(backPos))
+                end)
+                continue
+            end
+            
+            local move = Vector3.new(
+                math.cos(t + i) * 3,
+                math.sin(t*2 + i) * 2,
+                math.sin(t + i*2) * 3
+            )
+            
+            local cf = root.CFrame * CFrame.new(move) *
+                CFrame.Angles(
+                    math.rad(math.sin(t*4+i)*180),
+                    math.rad(t*200),
+                    math.rad(math.cos(t*3+i)*180)
+                )
+            
+            pcall(function()
+                prop.SetCurrentCFrame:InvokeServer(prop:GetPivot():Lerp(cf, 0.35))
+            end)
+        end
+    end)
+end
+
+local function StopKillTarget()
+    if TARGET_KILL_CONNECTION then
+        TARGET_KILL_CONNECTION:Disconnect()
+        TARGET_KILL_CONNECTION = nil
+    end
+    SentProps = {}
+end
+
+TrollTab:AddToggle({
+    Name = "próp kill player",
+    Default = false,
+    Callback = function(v)
+        TARGET_KILL_ENABLED = v
+        if v then
+            StartKillTarget()
+        else
+            StopKillTarget()
+        end
+    end
+})
 
 
 TrollTab:AddSection({ "+18" })
