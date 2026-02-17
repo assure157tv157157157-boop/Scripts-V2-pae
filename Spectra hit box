@@ -1,0 +1,385 @@
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+
+local LocalPlayer = Players.LocalPlayer
+
+-- UI
+local ScreenGui = Instance.new("ScreenGui")
+local Frame = Instance.new("Frame")
+local FrameCorner = Instance.new("UICorner")
+local UIStroke = Instance.new("UIStroke")
+local UIGradient = Instance.new("UIGradient")
+
+local Title = Instance.new("TextLabel")
+
+local TextBox = Instance.new("TextBox")
+local TextBoxCorner = Instance.new("UICorner")
+
+local TransparencyBox = Instance.new("TextBox")
+local TransparencyBoxCorner = Instance.new("UICorner")
+
+local ButtonToggle = Instance.new("TextButton")
+local ButtonToggleCorner = Instance.new("UICorner")
+
+local ButtonESP = Instance.new("TextButton")
+local ButtonESPCorner = Instance.new("UICorner")
+
+local ButtonMinimize = Instance.new("TextButton")
+local ButtonMinimizeCorner = Instance.new("UICorner")
+
+local ButtonColor = Instance.new("TextButton")
+local ButtonColorCorner = Instance.new("UICorner")
+
+local minimized = false
+
+ScreenGui.Parent = game.CoreGui
+Frame.Parent = ScreenGui
+TextBox.Parent = Frame
+TransparencyBox.Parent = Frame
+ButtonToggle.Parent = Frame
+ButtonESP.Parent = Frame
+ButtonMinimize.Parent = Frame
+Title.Parent = Frame
+ButtonColor.Parent = Frame
+
+FrameCorner.Parent = Frame
+TextBoxCorner.Parent = TextBox
+TransparencyBoxCorner.Parent = TransparencyBox
+ButtonToggleCorner.Parent = ButtonToggle
+ButtonESPCorner.Parent = ButtonESP
+ButtonMinimizeCorner.Parent = ButtonMinimize
+UIStroke.Parent = Frame
+UIGradient.Parent = Frame
+ButtonColorCorner.Parent = ButtonColor
+
+-- Frame config
+Frame.Size = UDim2.new(0, 180, 0, 230)
+Frame.Position = UDim2.new(0.5, -90, 0.5, -115)
+Frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+Frame.BorderSizePixel = 0
+Frame.Active = true
+Frame.Draggable = true
+Frame.ClipsDescendants = true
+Frame.BackgroundTransparency = 0.15
+Frame.Visible = true
+
+FrameCorner.CornerRadius = UDim.new(0, 14)
+
+UIStroke.Thickness = 2
+UIStroke.Transparency = 0.2
+UIStroke.Color = Color3.fromRGB(255, 60, 60)
+
+UIGradient.Color = ColorSequence.new({
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(80, 0, 0)),
+	ColorSequenceKeypoint.new(0.5, Color3.fromRGB(20, 20, 20)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(120, 0, 0))
+})
+UIGradient.Rotation = 90
+
+-- Title
+Title.Size = UDim2.new(1, 0, 0, 22)
+Title.Position = UDim2.new(0, 0, 0, 20)
+Title.BackgroundTransparency = 1
+Title.Text = "SPECTRA HITBOX"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 14
+
+-- Minimize button
+ButtonMinimize.Size = UDim2.new(1, 0, 0, 20)
+ButtonMinimize.Position = UDim2.new(0, 0, 0, 0)
+ButtonMinimize.Text = "▼"
+ButtonMinimize.BackgroundColor3 = Color3.fromRGB(40, 0, 0)
+ButtonMinimize.TextColor3 = Color3.fromRGB(255, 255, 255)
+ButtonMinimize.Font = Enum.Font.GothamBold
+ButtonMinimize.TextSize = 14
+ButtonMinimize.BackgroundTransparency = 0.25
+ButtonMinimizeCorner.CornerRadius = UDim.new(0, 14)
+
+-- Textbox (hitbox size)
+TextBox.Size = UDim2.new(0, 160, 0, 26)
+TextBox.Position = UDim2.new(0, 10, 0, 48)
+TextBox.Text = "10"
+TextBox.PlaceholderText = "Hitbox Size"
+TextBox.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+TextBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+TextBox.Font = Enum.Font.GothamBold
+TextBox.TextSize = 13
+TextBox.BackgroundTransparency = 0.35
+TextBox.ClearTextOnFocus = false
+TextBoxCorner.CornerRadius = UDim.new(0, 10)
+
+-- Transparency Box
+TransparencyBox.Size = UDim2.new(0, 160, 0, 26)
+TransparencyBox.Position = UDim2.new(0, 10, 0, 80)
+TransparencyBox.Text = "0.7"
+TransparencyBox.PlaceholderText = "Transparency (0 to 1)"
+TransparencyBox.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+TransparencyBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+TransparencyBox.Font = Enum.Font.GothamBold
+TransparencyBox.TextSize = 13
+TransparencyBox.BackgroundTransparency = 0.35
+TransparencyBox.ClearTextOnFocus = false
+TransparencyBoxCorner.CornerRadius = UDim.new(0, 10)
+
+-- Toggle Hitbox button
+ButtonToggle.Size = UDim2.new(0, 160, 0, 30)
+ButtonToggle.Position = UDim2.new(0, 10, 0, 115)
+ButtonToggle.Text = "Enable Hitbox"
+ButtonToggle.BackgroundColor3 = Color3.fromRGB(140, 0, 0)
+ButtonToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
+ButtonToggle.Font = Enum.Font.GothamBold
+ButtonToggle.TextSize = 13
+ButtonToggle.BackgroundTransparency = 0.15
+ButtonToggleCorner.CornerRadius = UDim.new(0, 12)
+
+-- ESP button
+ButtonESP.Size = UDim2.new(0, 160, 0, 30)
+ButtonESP.Position = UDim2.new(0, 10, 0, 150)
+ButtonESP.Text = "Enable ESP ALL"
+ButtonESP.BackgroundColor3 = Color3.fromRGB(90, 0, 0)
+ButtonESP.TextColor3 = Color3.fromRGB(255, 255, 255)
+ButtonESP.Font = Enum.Font.GothamBold
+ButtonESP.TextSize = 13
+ButtonESP.BackgroundTransparency = 0.15
+ButtonESPCorner.CornerRadius = UDim.new(0, 12)
+
+-- Color/Style button
+ButtonColor.Size = UDim2.new(0, 160, 0, 30)
+ButtonColor.Position = UDim2.new(0, 10, 0, 185)
+ButtonColor.Text = "Color: Red"
+ButtonColor.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
+ButtonColor.TextColor3 = Color3.fromRGB(255, 255, 255)
+ButtonColor.Font = Enum.Font.GothamBold
+ButtonColor.TextSize = 13
+ButtonColor.BackgroundTransparency = 0.25
+ButtonColorCorner.CornerRadius = UDim.new(0, 12)
+
+-- Globals
+_G.HeadSize = tonumber(TextBox.Text) or 10
+_G.HitboxTransparency = tonumber(TransparencyBox.Text) or 0.7
+_G.HitboxEnabled = false
+_G.ESPEnabled = false
+
+-- Hitbox Color Settings
+local HitboxColors = {
+	{ name = "Red", color = Color3.fromRGB(255, 0, 0), brickcolor = BrickColor.new("Really red") },
+	{ name = "Black", color = Color3.fromRGB(0, 0, 0), brickcolor = BrickColor.new("Black") },
+	{ name = "Orange", color = Color3.fromRGB(255, 120, 0), brickcolor = BrickColor.new("Bright orange") },
+	{ name = "Yellow", color = Color3.fromRGB(255, 255, 0), brickcolor = BrickColor.new("New Yeller") },
+	{ name = "Green", color = Color3.fromRGB(0, 255, 0), brickcolor = BrickColor.new("Lime green") },
+	{ name = "Blue", color = Color3.fromRGB(0, 120, 255), brickcolor = BrickColor.new("Bright blue") },
+	{ name = "Purple", color = Color3.fromRGB(180, 0, 255), brickcolor = BrickColor.new("Royal purple") },
+	{ name = "Pink", color = Color3.fromRGB(255, 40, 157), brickcolor = BrickColor.new("Hot pink") },
+	{ name = "Rainbow", color = nil, brickcolor = nil },
+}
+local HitboxColorIndex = 1
+_G.CurrentHitboxColorIndex = HitboxColorIndex
+_G.RainbowHitbox = false
+
+local function GetCurrentHitboxData()
+	return HitboxColors[_G.CurrentHitboxColorIndex]
+end
+
+local Targets = {}
+local ESPObjects = {}
+
+local function UpdateTargets()
+	Targets = {}
+	for _, plr in ipairs(Players:GetPlayers()) do
+		if plr ~= LocalPlayer then
+			table.insert(Targets, plr)
+		end
+	end
+end
+
+local function RemoveESP(plr)
+	if ESPObjects[plr] then
+		for _, obj in ipairs(ESPObjects[plr]) do
+			if obj and obj.Parent then
+				obj:Destroy()
+			end
+		end
+		ESPObjects[plr] = nil
+	end
+end
+
+local function CreateESP(plr)
+	RemoveESP(plr)
+	if not plr.Character then return end
+	local head = plr.Character:FindFirstChild("Head")
+	local hum = plr.Character:FindFirstChildOfClass("Humanoid")
+	if not head or not hum then return end
+	local Billboard = Instance.new("BillboardGui")
+	Billboard.Name = "SpectraESP"
+	Billboard.Adornee = head
+	Billboard.Size = UDim2.new(0, 200, 0, 50)
+	Billboard.StudsOffset = Vector3.new(0, 2.8, 0)
+	Billboard.AlwaysOnTop = true
+	Billboard.Parent = head
+	local TextLabel = Instance.new("TextLabel")
+	TextLabel.Size = UDim2.new(1, 0, 1, 0)
+	TextLabel.BackgroundTransparency = 1
+	TextLabel.TextScaled = true
+	TextLabel.Font = Enum.Font.GothamBold
+	TextLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
+	TextLabel.TextStrokeTransparency = 0.2
+	TextLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+	TextLabel.Parent = Billboard
+	ESPObjects[plr] = {Billboard, TextLabel}
+	task.spawn(function()
+		while _G.ESPEnabled and plr and plr.Character and hum and hum.Parent do
+			TextLabel.Text = plr.Name .. " | HP: " .. math.floor(hum.Health)
+			task.wait(0.1)
+		end
+	end)
+end
+
+local function RefreshESP()
+	for _, plr in ipairs(Targets) do
+		if _G.ESPEnabled then
+			CreateESP(plr)
+		else
+			RemoveESP(plr)
+		end
+	end
+end
+
+TextBox.FocusLost:Connect(function()
+	local value = tonumber(TextBox.Text)
+	if value then
+		_G.HeadSize = value
+	else
+		TextBox.Text = tostring(_G.HeadSize)
+	end
+end)
+
+TransparencyBox.FocusLost:Connect(function()
+	local value = tonumber(TransparencyBox.Text)
+	if value then
+		if value < 0 then value = 0 end
+		if value > 1 then value = 1 end
+		_G.HitboxTransparency = value
+		TransparencyBox.Text = tostring(value)
+	else
+		TransparencyBox.Text = tostring(_G.HitboxTransparency)
+	end
+end)
+
+ButtonToggle.MouseButton1Click:Connect(function()
+	_G.HitboxEnabled = not _G.HitboxEnabled
+	ButtonToggle.Text = (_G.HitboxEnabled and "Disable Hitbox") or "Enable Hitbox"
+	if not _G.HitboxEnabled then
+		for _, plr in ipairs(Targets) do
+			if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+				local hrp = plr.Character.HumanoidRootPart
+				hrp.Size = Vector3.new(2, 2, 1)
+				hrp.Transparency = 0
+				hrp.BrickColor = BrickColor.new("Medium stone grey")
+				hrp.Material = Enum.Material.Plastic
+				hrp.CanCollide = true
+				hrp.Massless = false
+			end
+		end
+	end
+end)
+
+ButtonESP.MouseButton1Click:Connect(function()
+	_G.ESPEnabled = not _G.ESPEnabled
+	ButtonESP.Text = (_G.ESPEnabled and "Disable ESP ALL") or "Enable ESP ALL"
+	RefreshESP()
+end)
+
+ButtonColor.MouseButton1Click:Connect(function()
+	_G.CurrentHitboxColorIndex = _G.CurrentHitboxColorIndex + 1
+	if _G.CurrentHitboxColorIndex > #HitboxColors then _G.CurrentHitboxColorIndex = 1 end
+
+	local data = GetCurrentHitboxData()
+	if data.name == "Rainbow" then
+		_G.RainbowHitbox = true
+	else
+		_G.RainbowHitbox = false
+	end
+	ButtonColor.Text = "Color: " .. data.name
+end)
+
+ButtonMinimize.MouseButton1Click:Connect(function()
+	minimized = not minimized
+	local newSize
+	if minimized then
+		newSize = UDim2.new(0, 180, 0, 20)
+	else
+		newSize = UDim2.new(0, 180, 0, 230)
+	end
+	local tweenInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+	local tween = TweenService:Create(Frame, tweenInfo, {Size = newSize})
+	tween:Play()
+	ButtonMinimize.Text = (minimized and "▲") or "▼"
+end)
+
+local function SetupRespawn(plr)
+	plr.CharacterAdded:Connect(function()
+		task.wait(1)
+		if _G.ESPEnabled then
+			CreateESP(plr)
+		end
+	end)
+end
+
+Players.PlayerAdded:Connect(function(plr)
+	if plr ~= LocalPlayer then
+		SetupRespawn(plr)
+	end
+end)
+
+for _, plr in ipairs(Players:GetPlayers()) do
+	if plr ~= LocalPlayer then
+		SetupRespawn(plr)
+	end
+end
+
+local function GetRainbowColor()
+	local t = tick()
+	local r = math.abs(math.sin(t*1))
+	local g = math.abs(math.sin(t*1 + math.pi/3))
+	local b = math.abs(math.sin(t*1 + 2*math.pi/3))
+	return Color3.new(r, g, b)
+end
+
+local function ApplyHitboxAppearance(hrp)
+	local size = _G.HeadSize
+	hrp.Size = Vector3.new(size * 1.35, size * 1.9, size * 1.35)
+	hrp.Transparency = _G.HitboxTransparency
+	hrp.CanCollide = false
+	hrp.Massless = true
+
+	local colorData = GetCurrentHitboxData()
+	if _G.RainbowHitbox then
+		hrp.Color = GetRainbowColor()
+		hrp.Material = Enum.Material.Neon
+	else
+		hrp.BrickColor = colorData.brickcolor
+		hrp.Color = colorData.color
+		hrp.Material = Enum.Material.Neon
+	end
+end
+
+RunService.RenderStepped:Connect(function()
+	if _G.HitboxEnabled then
+		for _, plr in ipairs(Targets) do
+			if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+				local hrp = plr.Character.HumanoidRootPart
+				ApplyHitboxAppearance(hrp)
+			end
+		end
+	end
+end)
+
+while true do
+	UpdateTargets()
+	if _G.ESPEnabled then
+		RefreshESP()
+	end
+	task.wait(1)
+end
