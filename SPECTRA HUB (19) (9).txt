@@ -938,6 +938,187 @@ TrollTab:AddButton({
 
 
 
+
+TrollTab:AddButton({
+Name = "Click Fling Doors",
+Description = "To use, it's recommended to get close to other doors. After they come to you, click on the player you want to fling",
+Callback = function()
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
+local RunService = game:GetService("RunService")
+
+local LocalPlayer = Players.LocalPlayer  
+local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()  
+local HRP = Character:WaitForChild("HumanoidRootPart")  
+
+local function isDoor(name)
+name = string.lower(name)
+return name:find("door") or name:find("doors") or name:find("porta")
+end
+
+-- Invisible target (BlackHole)  
+local BlackHole = Instance.new("Part")  
+BlackHole.Size = Vector3.new(100000, 100000, 100000)  
+BlackHole.Transparency = 1  
+BlackHole.Anchored = true  
+BlackHole.CanCollide = false  
+BlackHole.Name = "BlackHoleTarget"  
+BlackHole.Parent = Workspace  
+
+-- Base attachment on the BlackHole  
+local baseAttachment = Instance.new("Attachment")  
+baseAttachment.Name = "Luscaa_BlackHoleAttachment"  
+baseAttachment.Parent = BlackHole  
+
+-- Update BlackHole position  
+RunService.Heartbeat:Connect(function()  
+BlackHole.CFrame = HRP.CFrame  
+end)  
+
+-- List of conTrollTabed doors  
+local ConTrollTabedDoors = {}  
+
+-- Configuração do NETWORK POWER (APENAS para puxar melhor)  
+if not getgenv().Network then  
+getgenv().Network = {  
+BaseParts = {},  
+Velocity = Vector3.new(15,15,15)  
+}  
+
+Network.RetainPart = function(part)  
+if typeof(part) == "Instance"  
+and part:IsA("BasePart")  
+and part:IsDescendantOf(Workspace) then  
+table.insert(Network.BaseParts, part)  
+part.CustomPhysicalProperties = PhysicalProperties.new(0,0,0,0,0)  
+part.CanCollide = false  
+end  
+end  
+
+RunService.Heartbeat:Connect(function()  
+pcall(function()  
+sethiddenproperty(LocalPlayer,"SimulationRadius",math.huge)  
+end)  
+
+for _,part in pairs(Network.BaseParts) do  
+if part:IsDescendantOf(Workspace) then  
+part.Velocity = Network.Velocity  
+end  
+end  
+end)  
+end  
+
+-- Prepare a door to be conTrollTabed  
+local function SetupPart(part)  
+if not part:IsA("BasePart") or part.Anchored or not isDoor(part.Name) then return end  
+if part:FindFirstChild("Luscaa_Attached") then return end  
+
+part.CanCollide = false  
+Network.RetainPart(part)  
+
+for _, obj in ipairs(part:GetChildren()) do  
+if obj:IsA("AlignPosition") or obj:IsA("Torque") or obj:IsA("Attachment") then  
+obj:Destroy()  
+end  
+end  
+
+local marker = Instance.new("BoolValue", part)  
+marker.Name = "Luscaa_Attached"  
+
+local a1 = Instance.new("Attachment", part)  
+
+local align = Instance.new("AlignPosition", part)  
+align.Attachment0 = a1  
+align.Attachment1 = baseAttachment  
+align.MaxForce = 1e20  
+align.MaxVelocity = math.huge  
+align.Responsiveness = 99999  
+
+local torque = Instance.new("Torque", part)  
+torque.Attachment0 = a1  
+torque.RelativeTo = Enum.ActuatorRelativeTo.World  
+torque.Torque = Vector3.new(  
+math.random(-10e5, 10e5) * 90000,  
+math.random(-10e5, 10e5) * 90000,  
+math.random(-10e5, 10e5) * 90000  
+)  
+
+table.insert(ConTrollTabedDoors, {Part = part, Align = align, Torque = torque})  
+end  
+
+-- Detect doors existentes  
+for _, obj in ipairs(Workspace:GetDescendants()) do  
+if obj:IsA("BasePart") and isDoor(obj.Name) then  
+SetupPart(obj)  
+end  
+end  
+
+-- Novas portas  
+Workspace.DescendantAdded:Connect(function(obj)  
+if obj:IsA("BasePart") and isDoor(obj.Name) then  
+SetupPart(obj)  
+end  
+end)  
+
+-- Puxar portas  
+local pullConnection  
+pullConnection = RunService.Heartbeat:Connect(function()  
+if HRP then  
+for _, part in pairs(Network.BaseParts) do  
+if part and part.Parent and isDoor(part.Name) then  
+part.Velocity = (HRP.Position - part.Position) * 60  
+end  
+end  
+end  
+end)  
+
+-- TOOL
+local tool = Instance.new("Tool")
+tool.Name = "Fling Porta"
+tool.RequiresHandle = false
+tool.Parent = LocalPlayer.Backpack
+
+tool.Activated:Connect(function()
+local mouse = LocalPlayer:GetMouse()
+local target = mouse.Target
+if not target then return end
+
+local player = Players:GetPlayerFromCharacter(target:FindFirstAncestorOfClass("Model"))
+if not player or player == LocalPlayer then return end
+
+local char = player.Character  
+if not char then return end  
+local targetHRP = char:FindFirstChild("HumanoidRootPart")  
+if not targetHRP then return end  
+
+local targetAttachment = targetHRP:FindFirstChild("SHNMAX_TargetAttachment")  
+if not targetAttachment then  
+targetAttachment = Instance.new("Attachment", targetHRP)  
+targetAttachment.Name = "SHNMAX_TargetAttachment"  
+end  
+
+for _, data in ipairs(ConTrollTabedDoors) do  
+if data.Align then  
+data.Align.Attachment1 = targetAttachment  
+end  
+end  
+
+task.wait(5)
+
+for _, data in ipairs(ConTrollTabedDoors) do  
+if data.Align then  
+data.Align.Attachment1 = baseAttachment  
+end  
+end
+end)
+
+end
+
+})
+
+
+
+
 TrollTab:AddSection({"troll car"})
 
 --////////////////////////////////////////////////////
