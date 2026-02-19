@@ -31,6 +31,108 @@ Window:AddMinimizeButton({
 
 
 
+--////////////////////////////////////////////////////
+--// TAB CRÉDITOS
+local Tab1 = Window:MakeTab({
+    Title = "Créditos",
+    Icon = "rbxassetid://76311199408449"
+})
+
+
+--==============================
+-- CRÉDITOS DO HUB
+--==============================
+Tab1:AddSection({"Créditos do Hub"})
+
+Tab1:AddDiscordInvite({
+    Name = "Spectra Hub",
+    Description = "Comunidade oficial do Hub",
+    Logo = "rbxassetid://107533266955045",
+    Invite = "https://discord.gg/6DZaw66SR",
+})
+
+--==============================
+-- DETECTOR DE EXECUTOR
+--==============================
+local function detectExecutor()
+    if identifyexecutor then
+        return identifyexecutor()
+    elseif syn then
+        return "Synapse X"
+    elseif KRNL_LOADED then
+        return "KRNL"
+    elseif is_sirhurt_closure then
+        return "SirHurt"
+    elseif pebc_execute then
+        return "ProtoSmasher"
+    elseif getexecutorname then
+        return getexecutorname()
+    else
+        return "Executor Desconhecido"
+    end
+end
+
+local executorName = detectExecutor()
+
+-- Executor
+Tab1:AddParagraph({
+    "Executor",
+    executorName
+})
+
+-- 👇 NOME REAL DO JOGADOR (LOGADO)
+Tab1:AddParagraph({
+    "Jogador",
+    game:GetService("Players").LocalPlayer.Name
+})
+
+--==============================
+-- VERSÃO DO HUB
+--==============================
+Tab1:AddSection({"Versão do Hub"})
+
+Tab1:AddParagraph({
+    "Inversão do Hub",
+    "2.0.0.00.90"
+})
+
+--==============================
+-- CRIADORES
+--==============================
+Tab1:AddSection({"Criadores"})
+
+Tab1:AddParagraph({
+    "Desenvolvedor Principal",
+    "assure_TV"
+})
+
+Tab1:AddParagraph({
+    "ajudante",
+    "denolk_new: E ixi362 = nomi:"
+})
+
+Tab1:AddParagraph({
+    "Projeto",
+    "Spectra Hub"
+})
+
+
+Tab1:AddParagraph({
+    "nome das conta do Roblox do assure_TV",
+    "udydydi2usy6d6d e itz_pedro7229"
+})
+
+Tab1:AddSection({"midia"})
+
+Tab1:AddButton({
+    Name = " Copiar Canal do YouTube do assure_TV",
+    Callback = function()
+        if setclipboard then
+            setclipboard("assure_TV")
+            setclipboard("https://www.youtube.com/@assure_TV")
+        end
+    end
+})
 
 
 --// PLAYER TAB
